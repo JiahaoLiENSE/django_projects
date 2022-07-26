@@ -1,12 +1,9 @@
-from operator import imod
-from typing import Tuple
-from django.shortcuts import render
-from django.urls import reverse_lazy
-from django.views.generic.list import ListView
-from django.views.generic.detail import DetailView
-from django.views.generic.edit import CreateView, UpdateView, DeleteView
-
+from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.views import LoginView
+from django.urls import reverse_lazy
+from django.views.generic.detail import DetailView
+from django.views.generic.edit import CreateView, DeleteView, UpdateView
+from django.views.generic.list import ListView
 
 from .models import task
 
@@ -24,7 +21,7 @@ class CustomLoginView(LoginView):
         return reverse_lazy('tasks')
 
 
-class TaskList(ListView):
+class TaskList(LoginRequiredMixin, ListView):
     #it will look for 'task_list.html'.
     model =  task
     #the default name of template variable is 'object_list'.
@@ -33,24 +30,30 @@ class TaskList(ListView):
     
     # template file name can be changed by:
     # template_name = 'base/task.html'
+    def get_context_data(self, **kwargs):
+        # Call the base implementation first to get a context
+        context = super().get_context_data(**kwargs)
+        context['tasks'] = context['tasks'].filter(user=self.request.user)
+        context['count'] = context['tasks'].filter(complete=False).count()
+        return context
 
-class TaskDetail(DetailView):
+class TaskDetail(LoginRequiredMixin, DetailView):
     #it will look for 'task_detail.html'.
     model = task
     context_object_name = 'task'
 
-class TaskCreate(CreateView):
+class TaskCreate(LoginRequiredMixin, CreateView):
     model = task
     #that will pull out all fields in database.
     fields = '__all__'
     success_url = reverse_lazy('tasks')
 
-class TaskUpdate(UpdateView):
+class TaskUpdate(LoginRequiredMixin, UpdateView):
     model = task
     fields = '__all__'
     success_url = reverse_lazy('tasks')
 
-class TaskDelete(DeleteView):
+class TaskDelete(LoginRequiredMixin, DeleteView):
     model = task
     #
     context_object_name = 'task'
